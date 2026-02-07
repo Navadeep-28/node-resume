@@ -8,8 +8,6 @@ import {
   MapPin,
   Users,
   Clock,
-  MoreVertical,
-  Edit,
   Trash2,
   Eye,
   Pause,
@@ -54,8 +52,8 @@ export default function JobList() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Jobs</h1>
-          <p className="text-gray-500 mt-1">{jobs.length} open positions</p>
+          <h1 className="text-3xl font-bold text-white">Jobs</h1>
+          <p className="text-white/50 mt-1">{jobs.length} open positions</p>
         </div>
         <Link to="/jobs/create">
           <motion.button
@@ -73,18 +71,20 @@ export default function JobList() {
       {isLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {[...Array(6)].map((_, i) => (
-            <div key={i} className="glass rounded-2xl p-6 animate-pulse">
-              <div className="h-6 w-48 bg-gray-200 rounded mb-4" />
-              <div className="h-4 w-32 bg-gray-100 rounded mb-2" />
-              <div className="h-4 w-24 bg-gray-100 rounded" />
+            <div key={i} className="rounded-2xl glass-card p-6 animate-pulse">
+              <div className="h-6 w-48 bg-white/10 rounded mb-4" />
+              <div className="h-4 w-32 bg-white/10 rounded mb-2" />
+              <div className="h-4 w-24 bg-white/10 rounded" />
             </div>
           ))}
         </div>
       ) : jobs.length === 0 ? (
-        <div className="glass rounded-2xl p-12 text-center">
-          <Briefcase className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-gray-900">No jobs created yet</h3>
-          <p className="text-gray-500 mt-1">Create your first job to start screening candidates</p>
+        <div className="rounded-2xl glass-card p-12 text-center">
+          <div className="w-20 h-20 bg-white/10 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Briefcase className="w-10 h-10 text-white/30" />
+          </div>
+          <h3 className="text-lg font-semibold text-white">No jobs created yet</h3>
+          <p className="text-white/50 mt-1">Create your first job to start screening candidates</p>
           <Link to="/jobs/create">
             <motion.button
               whileHover={{ scale: 1.02 }}
@@ -103,39 +103,37 @@ export default function JobList() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.1 }}
-              className="glass rounded-2xl p-6 card-hover group"
+              className="rounded-2xl glass-card p-6 group hover:border-white/30 transition-all"
             >
               <div className="flex items-start justify-between mb-4">
                 <div className={`p-3 rounded-xl ${getStatusBg(job.status)}`}>
                   <Briefcase className="w-6 h-6" />
                 </div>
-                <div className="relative">
-                  <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusBadge(job.status)}`}>
-                    {job.status}
-                  </span>
-                </div>
+                <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusBadge(job.status)}`}>
+                  {job.status}
+                </span>
               </div>
 
-              <h3 className="text-xl font-bold text-gray-900 mb-2">{job.title}</h3>
+              <h3 className="text-xl font-bold text-white mb-2">{job.title}</h3>
               
               <div className="space-y-2 mb-4">
                 {job.department && (
-                  <p className="text-sm text-gray-500 flex items-center gap-2">
+                  <p className="text-sm text-white/50 flex items-center gap-2">
                     <Briefcase className="w-4 h-4" />
                     {job.department}
                   </p>
                 )}
                 {job.location && (
-                  <p className="text-sm text-gray-500 flex items-center gap-2">
+                  <p className="text-sm text-white/50 flex items-center gap-2">
                     <MapPin className="w-4 h-4" />
                     {job.location}
                   </p>
                 )}
-                <p className="text-sm text-gray-500 flex items-center gap-2">
+                <p className="text-sm text-white/50 flex items-center gap-2">
                   <Users className="w-4 h-4" />
                   {job.applicantsCount || 0} applicants
                 </p>
-                <p className="text-sm text-gray-500 flex items-center gap-2">
+                <p className="text-sm text-white/50 flex items-center gap-2">
                   <Clock className="w-4 h-4" />
                   {format(new Date(job.createdAt), 'MMM d, yyyy')}
                 </p>
@@ -147,13 +145,13 @@ export default function JobList() {
                   {job.requirements.skills.slice(0, 3).map(skill => (
                     <span
                       key={skill}
-                      className="px-2 py-0.5 bg-primary-100 text-primary-700 rounded text-xs"
+                      className="px-2 py-0.5 bg-primary-500/20 text-primary-400 rounded text-xs border border-primary-500/30"
                     >
                       {skill}
                     </span>
                   ))}
                   {job.requirements.skills.length > 3 && (
-                    <span className="px-2 py-0.5 bg-gray-100 text-gray-500 rounded text-xs">
+                    <span className="px-2 py-0.5 bg-white/10 text-white/50 rounded text-xs">
                       +{job.requirements.skills.length - 3}
                     </span>
                   )}
@@ -161,12 +159,12 @@ export default function JobList() {
               )}
 
               {/* Actions */}
-              <div className="flex items-center gap-2 pt-4 border-t border-gray-100 opacity-0 group-hover:opacity-100 transition-opacity">
+              <div className="flex items-center gap-2 pt-4 border-t border-white/10 opacity-0 group-hover:opacity-100 transition-opacity">
                 <Link to={`/jobs/${job._id}`} className="flex-1">
                   <motion.button
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
-                    className="w-full py-2 bg-primary-500 text-white rounded-lg text-sm font-medium hover:bg-primary-600 transition-colors flex items-center justify-center gap-1"
+                    className="w-full py-2 bg-primary-500/30 text-primary-400 rounded-xl text-sm font-medium hover:bg-primary-500/40 transition-colors flex items-center justify-center gap-1 border border-primary-500/30"
                   >
                     <Eye className="w-4 h-4" />
                     View
@@ -179,13 +177,13 @@ export default function JobList() {
                     id: job._id,
                     status: job.status === 'active' ? 'paused' : 'active'
                   })}
-                  className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+                  className={`p-2 rounded-xl transition-colors ${
+                    job.status === 'active' 
+                      ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30' 
+                      : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                  }`}
                 >
-                  {job.status === 'active' ? (
-                    <Pause className="w-4 h-4 text-gray-500" />
-                  ) : (
-                    <Play className="w-4 h-4 text-green-500" />
-                  )}
+                  {job.status === 'active' ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
                 </motion.button>
                 <motion.button
                   whileHover={{ scale: 1.1 }}
@@ -195,9 +193,9 @@ export default function JobList() {
                       deleteMutation.mutate(job._id);
                     }
                   }}
-                  className="p-2 rounded-lg hover:bg-red-50 transition-colors"
+                  className="p-2 rounded-xl bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/30 transition-colors"
                 >
-                  <Trash2 className="w-4 h-4 text-red-500" />
+                  <Trash2 className="w-4 h-4" />
                 </motion.button>
               </div>
             </motion.div>
@@ -210,20 +208,20 @@ export default function JobList() {
 
 function getStatusBg(status) {
   const bgs = {
-    active: 'bg-green-100 text-green-600',
-    paused: 'bg-yellow-100 text-yellow-600',
-    closed: 'bg-gray-100 text-gray-600',
-    draft: 'bg-blue-100 text-blue-600'
+    active: 'bg-emerald-500/20 text-emerald-400',
+    paused: 'bg-yellow-500/20 text-yellow-400',
+    closed: 'bg-white/10 text-white/60',
+    draft: 'bg-blue-500/20 text-blue-400'
   };
-  return bgs[status] || 'bg-gray-100 text-gray-600';
+  return bgs[status] || 'bg-white/10 text-white/60';
 }
 
 function getStatusBadge(status) {
   const badges = {
-    active: 'bg-green-100 text-green-700',
-    paused: 'bg-yellow-100 text-yellow-700',
-    closed: 'bg-gray-100 text-gray-700',
-    draft: 'bg-blue-100 text-blue-700'
+    active: 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30',
+    paused: 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30',
+    closed: 'bg-white/10 text-white/60 border border-white/20',
+    draft: 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
   };
-  return badges[status] || 'bg-gray-100 text-gray-700';
+  return badges[status] || 'bg-white/10 text-white/60';
 }

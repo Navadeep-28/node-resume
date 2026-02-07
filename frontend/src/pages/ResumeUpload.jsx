@@ -64,19 +64,12 @@ export default function ResumeUpload() {
     setUploading(true);
     setResults([]);
 
-    // Set up socket listeners
     socket.on('resume-processing', (data) => {
-      setProgress(prev => ({
-        ...prev,
-        [data.resumeId]: data
-      }));
+      setProgress(prev => ({ ...prev, [data.resumeId]: data }));
     });
 
     socket.on('batch-processing', (data) => {
-      setProgress(prev => ({
-        ...prev,
-        batch: data
-      }));
+      setProgress(prev => ({ ...prev, batch: data }));
     });
 
     try {
@@ -112,14 +105,12 @@ export default function ResumeUpload() {
           initial={{ scale: 0 }}
           animate={{ scale: 1 }}
           transition={{ type: 'spring', damping: 15 }}
-          className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-primary-500 to-accent-500 rounded-2xl shadow-lg shadow-primary-500/30 mb-4"
+          className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-primary-500 to-accent-500 rounded-3xl shadow-lg glow-primary mb-6"
         >
-          <Upload className="w-8 h-8 text-white" />
+          <Upload className="w-10 h-10 text-white" />
         </motion.div>
-        <h1 className="text-3xl font-bold text-gray-900">Upload Resumes</h1>
-        <p className="text-gray-500 mt-2">
-          Drop your resume files here for AI-powered analysis
-        </p>
+        <h1 className="text-3xl font-bold text-white">Upload Resumes</h1>
+        <p className="text-white/50 mt-2">Drop your resume files here for AI-powered analysis</p>
       </div>
 
       {/* Job Selection */}
@@ -127,9 +118,9 @@ export default function ResumeUpload() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
-        className="glass rounded-2xl p-6"
+        className="rounded-2xl glass-card p-6"
       >
-        <label className="block text-sm font-medium text-gray-700 mb-2">
+        <label className="block text-sm font-medium text-white/80 mb-3">
           Match Against Job Position (Optional)
         </label>
         <select
@@ -154,10 +145,10 @@ export default function ResumeUpload() {
       >
         <div
           {...getRootProps()}
-          className={`relative glass rounded-2xl p-12 text-center cursor-pointer transition-all duration-300 ${
+          className={`relative rounded-2xl glass-card p-12 text-center cursor-pointer transition-all duration-300 border-2 border-dashed ${
             isDragActive
-              ? 'border-2 border-dashed border-primary-500 bg-primary-50/50'
-              : 'hover:border-2 hover:border-dashed hover:border-gray-300'
+              ? 'border-primary-500 bg-primary-500/10'
+              : 'border-white/20 hover:border-white/40'
           }`}
         >
           <input {...getInputProps()} />
@@ -167,7 +158,7 @@ export default function ResumeUpload() {
             <motion.div
               animate={{
                 scale: isDragActive ? [1, 1.2, 1] : 1,
-                opacity: isDragActive ? [0.3, 0.5, 0.3] : 0.1
+                opacity: isDragActive ? [0.2, 0.4, 0.2] : 0.1
               }}
               transition={{ duration: 1.5, repeat: Infinity }}
               className="absolute inset-0 bg-gradient-to-r from-primary-500/20 to-accent-500/20"
@@ -184,22 +175,18 @@ export default function ResumeUpload() {
                 scale: isDragActive ? 1.1 : 1
               }}
               transition={{ duration: 0.5 }}
-              className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-gray-100 to-gray-200 rounded-2xl mb-4"
+              className="inline-flex items-center justify-center w-24 h-24 bg-gradient-to-br from-white/10 to-white/5 rounded-3xl border border-white/20 mb-6"
             >
-              <FileText className="w-10 h-10 text-gray-400" />
+              <Upload className="w-12 h-12 text-white/60" />
             </motion.div>
             
             {isDragActive ? (
-              <p className="text-xl font-semibold text-primary-600">Drop files here...</p>
+              <p className="text-xl font-semibold text-primary-400">Drop files here...</p>
             ) : (
               <>
-                <p className="text-xl font-semibold text-gray-700">
-                  Drag & drop resumes here
-                </p>
-                <p className="text-gray-500 mt-2">
-                  or click to browse files
-                </p>
-                <p className="text-sm text-gray-400 mt-4">
+                <p className="text-xl font-semibold text-white">Drag & drop resumes here</p>
+                <p className="text-white/50 mt-2">or click to browse files</p>
+                <p className="text-sm text-white/30 mt-4">
                   Supports PDF, DOCX, DOC, TXT (Max 10MB each)
                 </p>
               </>
@@ -215,21 +202,21 @@ export default function ResumeUpload() {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            className="glass rounded-2xl p-6"
+            className="rounded-2xl glass-card p-6"
           >
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">
+              <h3 className="text-lg font-semibold text-white">
                 Selected Files ({files.length})
               </h3>
               <button
                 onClick={() => setFiles([])}
-                className="text-sm text-red-500 hover:text-red-600 font-medium"
+                className="text-sm text-red-400 hover:text-red-300 font-medium transition-colors"
               >
                 Clear All
               </button>
             </div>
 
-            <div className="space-y-3 max-h-80 overflow-y-auto">
+            <div className="space-y-3 max-h-80 overflow-y-auto scrollbar-hide">
               {files.map((item, index) => (
                 <motion.div
                   key={item.id}
@@ -237,14 +224,14 @@ export default function ResumeUpload() {
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: 20 }}
                   transition={{ delay: index * 0.05 }}
-                  className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl group"
+                  className="flex items-center gap-4 p-4 rounded-xl bg-white/5 border border-white/10 group"
                 >
-                  <div className="w-10 h-10 bg-primary-100 rounded-lg flex items-center justify-center">
-                    <FileText className="w-5 h-5 text-primary-600" />
+                  <div className="w-12 h-12 bg-primary-500/20 rounded-xl flex items-center justify-center border border-primary-500/30">
+                    <FileText className="w-6 h-6 text-primary-400" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium text-gray-900 truncate">{item.file.name}</p>
-                    <p className="text-sm text-gray-500">
+                    <p className="font-medium text-white truncate">{item.file.name}</p>
+                    <p className="text-sm text-white/50">
                       {(item.file.size / 1024).toFixed(1)} KB
                     </p>
                   </div>
@@ -252,7 +239,7 @@ export default function ResumeUpload() {
                     whileHover={{ scale: 1.1 }}
                     whileTap={{ scale: 0.9 }}
                     onClick={() => removeFile(item.id)}
-                    className="p-2 text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
+                    className="p-2 text-white/40 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all rounded-lg hover:bg-red-500/20"
                   >
                     <X className="w-5 h-5" />
                   </motion.button>
@@ -289,14 +276,12 @@ export default function ResumeUpload() {
                 className="mt-4"
               >
                 <div className="flex items-center justify-between text-sm mb-2">
-                  <span className="text-gray-600">
-                    Processing: {progress.batch.fileName}
-                  </span>
-                  <span className="font-medium text-primary-600">
+                  <span className="text-white/60">Processing: {progress.batch.fileName}</span>
+                  <span className="font-medium text-primary-400">
                     {progress.batch.current} / {progress.batch.total}
                   </span>
                 </div>
-                <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
+                <div className="h-3 bg-white/10 rounded-full overflow-hidden">
                   <motion.div
                     initial={{ width: 0 }}
                     animate={{ width: `${progress.batch.progress}%` }}
@@ -318,11 +303,11 @@ export default function ResumeUpload() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            className="glass rounded-2xl p-6"
+            className="rounded-2xl glass-card p-6"
           >
             <div className="flex items-center gap-2 mb-4">
-              <Sparkles className="w-5 h-5 text-primary-500" />
-              <h3 className="text-lg font-semibold text-gray-900">Analysis Results</h3>
+              <Sparkles className="w-5 h-5 text-primary-400" />
+              <h3 className="text-lg font-semibold text-white">Analysis Results</h3>
             </div>
 
             <div className="space-y-3">
@@ -332,26 +317,26 @@ export default function ResumeUpload() {
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: index * 0.1 }}
-                  className={`flex items-center gap-4 p-4 rounded-xl ${
-                    result.success ? 'bg-green-50' : 'bg-red-50'
+                  className={`flex items-center gap-4 p-4 rounded-xl border ${
+                    result.success 
+                      ? 'bg-emerald-500/10 border-emerald-500/30' 
+                      : 'bg-red-500/10 border-red-500/30'
                   }`}
                 >
                   {result.success ? (
-                    <CheckCircle2 className="w-6 h-6 text-green-500" />
+                    <CheckCircle2 className="w-6 h-6 text-emerald-400" />
                   ) : (
-                    <AlertCircle className="w-6 h-6 text-red-500" />
+                    <AlertCircle className="w-6 h-6 text-red-400" />
                   )}
                   <div className="flex-1 min-w-0">
-                    <p className={`font-medium ${
-                      result.success ? 'text-green-700' : 'text-red-700'
-                    }`}>
+                    <p className={`font-medium ${result.success ? 'text-emerald-300' : 'text-red-300'}`}>
                       {result.success 
                         ? result.resume.analysis?.contact?.name || result.resume.originalName
                         : result.fileName
                       }
                     </p>
                     {result.success && (
-                      <div className="flex items-center gap-4 mt-1 text-sm text-gray-500">
+                      <div className="flex items-center gap-4 mt-1 text-sm text-white/50">
                         <span>Score: {result.resume.matchScore?.overallScore || 'N/A'}%</span>
                         <span>•</span>
                         <span>{result.resume.analysis?.skills?.totalSkills || 0} skills</span>
@@ -360,7 +345,7 @@ export default function ResumeUpload() {
                       </div>
                     )}
                     {!result.success && (
-                      <p className="text-sm text-red-500">{result.error}</p>
+                      <p className="text-sm text-red-400/80">{result.error}</p>
                     )}
                   </div>
                   {result.success && (
@@ -386,9 +371,9 @@ export default function ResumeUpload() {
         className="grid grid-cols-1 md:grid-cols-3 gap-4"
       >
         {[
-          { icon: Zap, title: 'Fast Processing', desc: 'AI-powered analysis in seconds' },
-          { icon: Sparkles, title: 'Smart Matching', desc: 'Match candidates to jobs instantly' },
-          { icon: FileText, title: 'Detailed Reports', desc: 'Get comprehensive insights' }
+          { icon: Zap, title: 'Fast Processing', desc: 'AI-powered analysis in seconds', gradient: 'from-yellow-500 to-orange-500' },
+          { icon: Sparkles, title: 'Smart Matching', desc: 'Match candidates to jobs instantly', gradient: 'from-primary-500 to-cyan-500' },
+          { icon: FileText, title: 'Detailed Reports', desc: 'Get comprehensive insights', gradient: 'from-violet-500 to-purple-500' }
         ].map((feature, index) => (
           <motion.div
             key={feature.title}
@@ -396,11 +381,13 @@ export default function ResumeUpload() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.4 + index * 0.1 }}
             whileHover={{ y: -5 }}
-            className="p-4 rounded-xl bg-gradient-to-br from-gray-50 to-gray-100 text-center"
+            className="p-6 rounded-2xl glass-card text-center group"
           >
-            <feature.icon className="w-8 h-8 mx-auto text-primary-500 mb-2" />
-            <h4 className="font-semibold text-gray-900">{feature.title}</h4>
-            <p className="text-sm text-gray-500">{feature.desc}</p>
+            <div className={`inline-flex items-center justify-center w-14 h-14 bg-gradient-to-br ${feature.gradient} rounded-2xl mb-4 shadow-lg group-hover:scale-110 transition-transform`}>
+              <feature.icon className="w-7 h-7 text-white" />
+            </div>
+            <h4 className="font-semibold text-white">{feature.title}</h4>
+            <p className="text-sm text-white/50 mt-1">{feature.desc}</p>
           </motion.div>
         ))}
       </motion.div>

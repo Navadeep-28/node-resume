@@ -12,7 +12,7 @@ import {
   Plus,
   X,
   Sparkles,
-  Save
+  Loader2
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../services/api';
@@ -37,11 +37,7 @@ export default function JobCreate() {
       maxExperience: 10,
       education: 'Bachelors'
     },
-    salary: {
-      min: '',
-      max: '',
-      currency: 'USD'
-    }
+    salary: { min: '', max: '', currency: 'USD' }
   });
   const [newSkill, setNewSkill] = useState('');
 
@@ -58,20 +54,14 @@ export default function JobCreate() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    createMutation.mutate({
-      ...formData,
-      status: 'active'
-    });
+    createMutation.mutate({ ...formData, status: 'active' });
   };
 
   const addSkill = (skill) => {
     if (skill && !formData.requirements.skills.includes(skill)) {
       setFormData(f => ({
         ...f,
-        requirements: {
-          ...f.requirements,
-          skills: [...f.requirements.skills, skill]
-        }
+        requirements: { ...f.requirements, skills: [...f.requirements.skills, skill] }
       }));
       setNewSkill('');
     }
@@ -80,10 +70,7 @@ export default function JobCreate() {
   const removeSkill = (skill) => {
     setFormData(f => ({
       ...f,
-      requirements: {
-        ...f.requirements,
-        skills: f.requirements.skills.filter(s => s !== skill)
-      }
+      requirements: { ...f.requirements, skills: f.requirements.skills.filter(s => s !== skill) }
     }));
   };
 
@@ -99,14 +86,12 @@ export default function JobCreate() {
           initial={{ scale: 0 }}
           animate={{ scale: 1 }}
           transition={{ type: 'spring', damping: 15 }}
-          className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-primary-500 to-accent-500 rounded-2xl shadow-lg shadow-primary-500/30 mb-4"
+          className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-primary-500 to-accent-500 rounded-3xl shadow-lg glow-primary mb-6"
         >
-          <Briefcase className="w-8 h-8 text-white" />
+          <Briefcase className="w-10 h-10 text-white" />
         </motion.div>
-        <h1 className="text-3xl font-bold text-gray-900">Create New Job</h1>
-        <p className="text-gray-500 mt-2">
-          Define the job requirements for AI-powered candidate matching
-        </p>
+        <h1 className="text-3xl font-bold text-white">Create New Job</h1>
+        <p className="text-white/50 mt-2">Define the job requirements for AI-powered candidate matching</p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
@@ -115,15 +100,13 @@ export default function JobCreate() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="glass rounded-2xl p-6"
+          className="rounded-2xl glass-card p-6"
         >
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Basic Information</h2>
+          <h2 className="text-lg font-semibold text-white mb-4">Basic Information</h2>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Job Title *
-              </label>
+              <label className="block text-sm font-medium text-white/60 mb-2">Job Title *</label>
               <input
                 type="text"
                 required
@@ -135,9 +118,7 @@ export default function JobCreate() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Department
-              </label>
+              <label className="block text-sm font-medium text-white/60 mb-2">Department</label>
               <input
                 type="text"
                 value={formData.department}
@@ -148,7 +129,7 @@ export default function JobCreate() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-white/60 mb-2">
                 <MapPin className="w-4 h-4 inline mr-1" />
                 Location
               </label>
@@ -162,7 +143,7 @@ export default function JobCreate() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-white/60 mb-2">
                 <Clock className="w-4 h-4 inline mr-1" />
                 Employment Type
               </label>
@@ -181,9 +162,7 @@ export default function JobCreate() {
           </div>
 
           <div className="mt-6">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Job Description
-            </label>
+            <label className="block text-sm font-medium text-white/60 mb-2">Job Description</label>
             <textarea
               rows={4}
               value={formData.description}
@@ -199,15 +178,13 @@ export default function JobCreate() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className="glass rounded-2xl p-6"
+          className="rounded-2xl glass-card p-6"
         >
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Requirements</h2>
+          <h2 className="text-lg font-semibold text-white mb-4">Requirements</h2>
 
           {/* Skills */}
           <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Required Skills
-            </label>
+            <label className="block text-sm font-medium text-white/60 mb-2">Required Skills</label>
             
             <div className="flex gap-2 mb-3">
               <input
@@ -223,7 +200,7 @@ export default function JobCreate() {
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={() => addSkill(newSkill)}
-                className="px-4 py-2 bg-primary-500 text-white rounded-xl hover:bg-primary-600 transition-colors"
+                className="px-4 py-2 bg-primary-500/30 text-primary-400 rounded-xl hover:bg-primary-500/40 transition-colors border border-primary-500/30"
               >
                 <Plus className="w-5 h-5" />
               </motion.button>
@@ -236,14 +213,13 @@ export default function JobCreate() {
                   key={skill}
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
-                  exit={{ scale: 0 }}
-                  className="inline-flex items-center gap-1 px-3 py-1 bg-primary-100 text-primary-700 rounded-full"
+                  className="inline-flex items-center gap-1 px-3 py-1 bg-primary-500/20 text-primary-400 rounded-full border border-primary-500/30"
                 >
                   {skill}
                   <button
                     type="button"
                     onClick={() => removeSkill(skill)}
-                    className="p-0.5 hover:bg-primary-200 rounded-full transition-colors"
+                    className="p-0.5 hover:bg-white/10 rounded-full transition-colors"
                   >
                     <X className="w-3 h-3" />
                   </button>
@@ -253,7 +229,7 @@ export default function JobCreate() {
 
             {/* Suggested Skills */}
             <div>
-              <p className="text-sm text-gray-500 mb-2">Suggested skills:</p>
+              <p className="text-sm text-white/40 mb-2">Suggested skills:</p>
               <div className="flex flex-wrap gap-2">
                 {suggestedSkills
                   .filter(s => !formData.requirements.skills.includes(s))
@@ -265,7 +241,7 @@ export default function JobCreate() {
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
                       onClick={() => addSkill(skill)}
-                      className="px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-sm hover:bg-gray-200 transition-colors"
+                      className="px-3 py-1 bg-white/5 text-white/60 rounded-full text-sm hover:bg-white/10 transition-colors border border-white/10"
                     >
                       + {skill}
                     </motion.button>
@@ -278,9 +254,7 @@ export default function JobCreate() {
           {/* Experience */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Minimum Experience (years)
-              </label>
+              <label className="block text-sm font-medium text-white/60 mb-2">Min Experience (years)</label>
               <input
                 type="number"
                 min="0"
@@ -295,9 +269,7 @@ export default function JobCreate() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Maximum Experience (years)
-              </label>
+              <label className="block text-sm font-medium text-white/60 mb-2">Max Experience (years)</label>
               <input
                 type="number"
                 min="0"
@@ -314,7 +286,7 @@ export default function JobCreate() {
 
           {/* Education */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-white/60 mb-2">
               <GraduationCap className="w-4 h-4 inline mr-1" />
               Minimum Education
             </label>
@@ -340,18 +312,16 @@ export default function JobCreate() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
-          className="glass rounded-2xl p-6"
+          className="rounded-2xl glass-card p-6"
         >
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">
+          <h2 className="text-lg font-semibold text-white mb-4">
             <DollarSign className="w-5 h-5 inline mr-1" />
             Compensation (Optional)
           </h2>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Minimum Salary
-              </label>
+              <label className="block text-sm font-medium text-white/60 mb-2">Min Salary</label>
               <input
                 type="number"
                 value={formData.salary.min}
@@ -365,9 +335,7 @@ export default function JobCreate() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Maximum Salary
-              </label>
+              <label className="block text-sm font-medium text-white/60 mb-2">Max Salary</label>
               <input
                 type="number"
                 value={formData.salary.max}
@@ -381,9 +349,7 @@ export default function JobCreate() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Currency
-              </label>
+              <label className="block text-sm font-medium text-white/60 mb-2">Currency</label>
               <select
                 value={formData.salary.currency}
                 onChange={(e) => setFormData(f => ({
@@ -426,7 +392,7 @@ export default function JobCreate() {
           >
             {createMutation.isLoading ? (
               <>
-                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                <Loader2 className="w-5 h-5 animate-spin" />
                 Creating...
               </>
             ) : (
