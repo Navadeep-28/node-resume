@@ -1,7 +1,7 @@
 // backend/services/parserService.js
-import pdfParse from 'pdf-parse';
-import mammoth from 'mammoth';
 import fs from 'fs/promises';
+import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.mjs';
+import mammoth from 'mammoth';
 
 class ParserService {
   async parseFile(filePath, mimeType) {
@@ -30,10 +30,31 @@ class ParserService {
     }
   }
 
+  // UPDATED: Using pdfjs-dist which is much more robust against XRef errors
   async parsePDF(filePath) {
     const dataBuffer = await fs.readFile(filePath);
-    const data = await pdfParse(dataBuffer);
-    return data.text;
+    
+    // Load the PDF document
+    const loadingTask = pdfjsLib.getDocument({
+      data: new Uint8Array(dataBuffer),
+      useSystemFonts: true,
+      disableFontFace: true,
+      verbosity: 0 // Suppress warnings like "bad XRef entry"
+    });
+
+    const doc = await loadingTask.promise;
+    const numPages = doc.numPages;
+    let fullText = '';
+
+    // Extract text from each page
+    for (let i = 1; i <= numPages; i++) {
+      const page = await doc.getPage(i);
+      const textContent = await page.getTextContent();
+      const pageText = textContent.items.map(item => item.str).join(' ');
+      fullText += pageText + '\n';
+    }
+
+    return fullText;
   }
 
   async parseDocx(filePath) {
@@ -50,8 +71,8 @@ class ParserService {
     return text
       .replace(/\r\n/g, '\n')
       .replace(/\t/g, ' ')
-      .replace(/\s+/g, ' ')
-      .replace(/[^\x20-\x7E\n]/g, '')
+      .replace(/\s+/g, ' ') // Collapse multiple spaces
+      .replace(/[^\x20-\x7E\n]/g, '') // Remove non-printable characters
       .trim();
   }
 }

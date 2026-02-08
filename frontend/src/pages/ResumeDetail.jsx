@@ -20,7 +20,9 @@ import {
   Award,
   Clock,
   CheckCircle2,
-  XCircle
+  XCircle,
+  Cpu,
+  DollarSign
 } from 'lucide-react';
 import {
   RadarChart,
@@ -416,6 +418,101 @@ export default function ResumeDetail() {
                       </span>
                     ))}
                   </div>
+                </div>
+              )}
+            </motion.div>
+          )}
+
+          {/* AI Analysis Section - Only show if AI powered */}
+          {resume.analysis?.aiPowered && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.6 }}
+              className="rounded-2xl glass-card p-6"
+            >
+              <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+                <Cpu className="w-5 h-5 text-violet-400" />
+                AI Assessment
+                <span className="text-xs px-2 py-1 bg-violet-500/20 text-violet-400 rounded-full border border-violet-500/30">
+                  {resume.analysis?.aiModel || 'GPT-4'}
+                </span>
+              </h3>
+
+              {/* Overall Assessment */}
+              {resume.analysis?.overallAssessment && (
+                <div className="p-4 bg-white/5 rounded-xl border border-white/10 mb-4">
+                  <p className="text-white/80 leading-relaxed">{resume.analysis.overallAssessment}</p>
+                </div>
+              )}
+
+              {/* Strengths & Weaknesses */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                {/* Strengths */}
+                {resume.analysis?.analysis?.strengths?.length > 0 && (
+                  <div className="p-4 bg-emerald-500/10 rounded-xl border border-emerald-500/20">
+                    <h4 className="font-medium text-emerald-400 mb-2 flex items-center gap-2">
+                      <CheckCircle2 className="w-4 h-4" />
+                      Strengths
+                    </h4>
+                    <ul className="space-y-1">
+                      {resume.analysis.analysis.strengths.map((strength, i) => (
+                        <li key={i} className="text-sm text-white/70 flex items-start gap-2">
+                          <span className="text-emerald-400 mt-1">•</span>
+                          {strength}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {/* Weaknesses/Concerns */}
+                {resume.analysis?.analysis?.weaknesses?.length > 0 && (
+                  <div className="p-4 bg-orange-500/10 rounded-xl border border-orange-500/20">
+                    <h4 className="font-medium text-orange-400 mb-2 flex items-center gap-2">
+                      <AlertTriangle className="w-4 h-4" />
+                      Areas of Concern
+                    </h4>
+                    <ul className="space-y-1">
+                      {resume.analysis.analysis.weaknesses.map((weakness, i) => (
+                        <li key={i} className="text-sm text-white/70 flex items-start gap-2">
+                          <span className="text-orange-400 mt-1">•</span>
+                          {weakness}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+
+              {/* Unique Value & Culture Fit */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                {resume.analysis?.analysis?.uniqueValue && (
+                  <div className="p-4 bg-blue-500/10 rounded-xl border border-blue-500/20">
+                    <h4 className="font-medium text-blue-400 mb-2">Unique Value</h4>
+                    <p className="text-sm text-white/70">{resume.analysis.analysis.uniqueValue}</p>
+                  </div>
+                )}
+                
+                {resume.analysis?.analysis?.cultureFit && (
+                  <div className="p-4 bg-purple-500/10 rounded-xl border border-purple-500/20">
+                    <h4 className="font-medium text-purple-400 mb-2">Culture Fit</h4>
+                    <p className="text-sm text-white/70">{resume.analysis.analysis.cultureFit}</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Salary Estimate */}
+              {resume.analysis?.salaryEstimate?.min && (
+                <div className="p-4 bg-gradient-to-r from-primary-500/10 to-accent-500/10 rounded-xl border border-primary-500/20">
+                  <h4 className="font-medium text-primary-400 mb-2 flex items-center gap-2">
+                    <DollarSign className="w-4 h-4" />
+                    Estimated Salary Range
+                  </h4>
+                  <p className="text-2xl font-bold text-white">
+                    {resume.analysis.salaryEstimate.currency} {resume.analysis.salaryEstimate.min.toLocaleString()} - {resume.analysis.salaryEstimate.max.toLocaleString()}
+                  </p>
+                  <p className="text-sm text-white/50 mt-1">{resume.analysis.salaryEstimate.basis}</p>
                 </div>
               )}
             </motion.div>

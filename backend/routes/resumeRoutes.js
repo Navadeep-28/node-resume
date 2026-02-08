@@ -11,12 +11,14 @@ import {
   updateResume,
   deleteResume,
   compareResumes,
-  reanalyzeResume
+  reanalyzeResume,
+  generateInterviewQuestions,
+  analyzeATS,
+  getAIStatus
 } from '../controllers/resumeController.js';
 
 const router = express.Router();
 
-// Configure multer storage
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, 'uploads/');
@@ -44,10 +46,11 @@ const fileFilter = (req, file, cb) => {
 const upload = multer({
   storage,
   fileFilter,
-  limits: { fileSize: 10 * 1024 * 1024 } // 10MB limit
+  limits: { fileSize: 10 * 1024 * 1024 }
 });
 
 // Routes
+router.get('/ai-status', getAIStatus);
 router.post('/upload', upload.single('resume'), uploadResume);
 router.post('/upload-batch', upload.array('resumes', 50), uploadMultipleResumes);
 router.get('/', getResumes);
@@ -56,5 +59,7 @@ router.put('/:id', updateResume);
 router.delete('/:id', deleteResume);
 router.post('/compare', compareResumes);
 router.post('/:id/reanalyze', reanalyzeResume);
+router.post('/:id/interview-questions', generateInterviewQuestions);
+router.post('/:id/ats-analysis', analyzeATS);
 
 export default router;

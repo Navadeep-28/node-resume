@@ -15,87 +15,30 @@ const resumeSchema = new mongoose.Schema({
     default: 'pending'
   },
   rawText: String,
+  
+  // --- MAJOR FIX: Use Mixed type for the entire analysis object ---
+  // This prevents ALL validation errors for nested fields like suggestions, skills, etc.
   analysis: {
-    skills: {
-      categorized: {
-        programming: [String],
-        frontend: [String],
-        backend: [String],
-        database: [String],
-        cloud: [String],
-        ml_ai: [String],
-        soft_skills: [String],
-        other: [String]
-      },
-      keywords: [String],
-      totalSkills: Number
-    },
-    experience: {
-      totalYears: Number,
-      experienceLevel: String,
-      jobTitles: [String]
-    },
-    education: {
-      degrees: [String],
-      universities: [String],
-      fields: [String],
-      highestDegree: String,
-      score: Number
-    },
-    contact: {
-      name: String,
-      email: String,
-      phone: String,
-      linkedin: String,
-      github: String,
-      location: String
-    },
-    sentiment: {
-      score: Number,
-      comparative: Number,
-      professionalismScore: Number,
-      tone: String
-    },
-    redFlags: [{
-      type: { type: String },
-      message: String,
-      severity: String
-    }],
-    warnings: [{
-      type: { type: String },
-      message: String,
-      severity: String
-    }],
-    suggestions: [{
-      type: { type: String },
-      message: String,
-      severity: String
-    }],
-    wordCount: Number,
-    interviewQuestions: [{
-      category: String,
-      question: String,
-      focus: String
-    }]
+    type: mongoose.Schema.Types.Mixed,
+    default: {}
   },
+  
+  // Also make matchScore flexible to prevent errors there too
   matchScore: {
-    overallScore: Number,
-    matchDetails: {
-      skillsMatch: [String],
-      missingSkills: [String],
-      experienceMatch: Boolean,
-      educationMatch: Boolean
-    },
-    recommendation: {
-      status: String,
-      color: String,
-      action: String
+    type: mongoose.Schema.Types.Mixed,
+    default: {
+      overallScore: 0,
+      matchDetails: {},
+      recommendation: { status: 'Pending', color: 'gray' }
     }
   },
+
+  // References
   jobId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Job'
   },
+  // User data
   tags: [String],
   notes: String,
   starred: {
@@ -103,13 +46,16 @@ const resumeSchema = new mongoose.Schema({
     default: false
   }
 }, {
-  timestamps: true
+  timestamps: true,
+  strict: false // Allow extra fields just in case
 });
 
-// Indexes for better query performance
+// Indexes
+// Note: You can still index fields inside Mixed types!
 resumeSchema.index({ 'analysis.contact.email': 1 });
 resumeSchema.index({ 'matchScore.overallScore': -1 });
 resumeSchema.index({ status: 1 });
 resumeSchema.index({ createdAt: -1 });
+resumeSchema.index({ 'analysis.aiPowered': 1 });
 
 export default mongoose.model('Resume', resumeSchema);

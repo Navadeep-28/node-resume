@@ -3,12 +3,12 @@ import natural from 'natural';
 import compromise from 'compromise';
 import Sentiment from 'sentiment';
 import keywordExtractor from 'keyword-extractor';
+import aiService from './aiService.js';
 
 const tokenizer = new natural.WordTokenizer();
-const TfIdf = natural.TfIdf;
 const sentiment = new Sentiment();
 
-// Skills database
+// Skills database for fallback
 const skillsDatabase = {
   programming: ['javascript', 'python', 'java', 'c++', 'c#', 'ruby', 'go', 'rust', 'typescript', 'php', 'swift', 'kotlin', 'scala', 'r', 'matlab'],
   frontend: ['react', 'vue', 'angular', 'svelte', 'html', 'css', 'sass', 'less', 'tailwind', 'bootstrap', 'jquery', 'redux', 'next.js', 'nuxt', 'gatsby'],
@@ -21,10 +21,217 @@ const skillsDatabase = {
 
 class NLPService {
   constructor() {
-    this.tfidf = new TfIdf();
+    this.useAI = aiService.isConfigured();
   }
 
-  // Extract skills from text
+  // Main analysis function - uses AI if available, falls back to rule-based
+  async analyzeResume(text, jobRequirements = null, mode = 'ai') {
+    const aiAvailable = aiService.isConfigured();
+    
+    console.log(`Processing Request - Mode: ${mode}, AI Available: ${aiAvailable}`);
+    
+    // If User wants AI AND AI is configured
+    if (mode === 'ai' && aiAvailable) {
+      try {
+        console.log('🤖 Starting AI Analysis...');
+        const aiAnalysis = await aiService.analyzeResume(text, jobRequirements);
+        return this.transformAIResponse(aiAnalysis, text);
+      } catch (error) {
+        console.error('⚠️ AI Failed, falling back to rule-based:', error.message);
+        // Fallback is still useful if AI crashes mid-way
+        return this.ruleBasedAnalysis(text, jobRequirements);
+      }
+    }
+    
+    // Explicit Rule-Based Mode OR AI not configured
+    else {
+      console.log('⚡ Running Rule-Based Analysis');
+      return this.ruleBasedAnalysis(text, jobRequirements);
+    }
+  }
+
+  // Transform AI response to match our schema
+  transformAIResponse(aiAnalysis, originalText) {
+    return {
+      contact: {
+        name: aiAnalysis.contact?.name || null,
+        email: aiAnalysis.contact?.email || null,
+        phone: aiAnalysis.contact?.phone || null,
+        location: aiAnalysis.contact?.location || null,
+        linkedin: aiAnalysis.contact?.linkedin || null,
+        github: aiAnalysis.contact?.github || null
+      },
+      skills: {
+        categorized: {
+          programming: aiAnalysis.skills?.programming || [],
+          frontend: aiAnalysis.skills?.frameworks?.filter(f => 
+            ['react', 'vue', 'angular', 'svelte'].some(fw => f.toLowerCase().includes(fw))
+          ) || [],
+          backend: aiAnalysis.skills?.frameworks?.filter(f => 
+            ['node', 'express', 'django', 'flask', 'spring'].some(fw => f.toLowerCase().includes(fw))
+          ) || [],
+          database: aiAnalysis.skills?.databases || [],
+          cloud: aiAnalysis.skills?.cloud || [],
+          ml_ai: aiAnalysis.skills?.technical?.filter(s => 
+            ['machine learning', 'deep learning', 'ai', 'tensorflow', 'pytorch'].some(ml => s.toLowerCase().includes(ml))
+          ) || [],
+          soft_skills: aiAnalysis.skills?.soft || [],
+          other: aiAnalysis.skills?.other || []
+        },
+        keywords: [
+          ...(aiAnalysis.skills?.technical || []),
+          ...(aiAnalysis.skills?.programming || []),
+          ...(aiAnalysis.skills?.frameworks || [])
+        ].slice(0, 30),
+        totalSkills: this.countTotalSkills(aiAnalysis.skills),
+        proficiencyLevels: aiAnalysis.skills?.proficiencyLevels || {}
+      },
+      experience: {
+        totalYears: aiAnalysis.experience?.totalYears || 0,
+        experienceLevel: aiAnalysis.experience?.level || this.categorizeExperienceLevel(aiAnalysis.experience?.totalYears || 0),
+        jobTitles: aiAnalysis.experience?.positions?.map(p => p.title) || [],
+        positions: aiAnalysis.experience?.positions || [],
+        industries: aiAnalysis.experience?.industries || [],
+        careerProgression: aiAnalysis.experience?.careerProgression || null
+      },
+      education: {
+        degrees: aiAnalysis.education?.degrees?.map(d => d.degree) || [],
+        universities: aiAnalysis.education?.degrees?.map(d => d.institution) || [],
+        fields: aiAnalysis.education?.degrees?.map(d => d.field) || [],
+        highestDegree: aiAnalysis.education?.highestDegree || 'Not specified',
+        certifications: aiAnalysis.education?.certifications || [],
+        score: this.calculateEducationScore(aiAnalysis.education?.degrees?.map(d => d.degree) || [])
+      },
+      projects: aiAnalysis.projects || [],
+      languages: aiAnalysis.languages || [],
+      achievements: aiAnalysis.achievements || [],
+      sentiment: {
+        score: 0,
+        comparative: 0,
+        professionalismScore: this.calculateProfessionalismFromAI(aiAnalysis),
+        tone: 'Professional'
+      },
+      analysis: aiAnalysis.analysis || {},
+      redFlags: aiAnalysis.analysis?.redFlags || [],
+      warnings: [],
+      suggestions: this.generateSuggestionsFromAI(aiAnalysis),
+      matchScore: aiAnalysis.matchScore ? {
+        overallScore: aiAnalysis.matchScore.overall || 0,
+        matchDetails: {
+          skillsMatch: aiAnalysis.matchScore.matchedSkills || [],
+          missingSkills: aiAnalysis.matchScore.missingSkills || [],
+          experienceMatch: !aiAnalysis.matchScore.underqualified,
+          educationMatch: true,
+          skillMatchPercentage: aiAnalysis.matchScore.breakdown?.skills || 0
+        },
+        recommendation: this.getRecommendation(aiAnalysis.matchScore.overall || 0),
+        breakdown: aiAnalysis.matchScore.breakdown || {}
+      } : null,
+      interviewQuestions: aiAnalysis.interviewQuestions || [],
+      salaryEstimate: aiAnalysis.salaryEstimate || null,
+      overallAssessment: aiAnalysis.overallAssessment || null,
+      summary: aiAnalysis.summary || null,
+      wordCount: originalText.split(/\s+/).length,
+      analyzedAt: new Date(),
+      aiPowered: true,
+      aiModel: aiAnalysis.aiModel || 'gpt-4o-mini'
+    };
+  }
+
+  // Count total skills from AI response
+  countTotalSkills(skills) {
+    if (!skills) return 0;
+    let count = 0;
+    ['technical', 'programming', 'frameworks', 'databases', 'cloud', 'soft', 'other'].forEach(key => {
+      if (Array.isArray(skills[key])) {
+        count += skills[key].length;
+      }
+    });
+    return count;
+  }
+
+  // Calculate professionalism score from AI analysis
+  calculateProfessionalismFromAI(aiAnalysis) {
+    let score = 70; // Base score
+    
+    // Increase score for positive indicators
+    if (aiAnalysis.experience?.positions?.length > 0) score += 5;
+    if (aiAnalysis.education?.degrees?.length > 0) score += 5;
+    if (aiAnalysis.achievements?.length > 0) score += 5;
+    if (aiAnalysis.projects?.length > 0) score += 5;
+    if (aiAnalysis.contact?.linkedin) score += 3;
+    if (aiAnalysis.contact?.github) score += 2;
+    
+    // Decrease for red flags
+    if (aiAnalysis.analysis?.redFlags?.length > 0) {
+      score -= aiAnalysis.analysis.redFlags.length * 5;
+    }
+    
+    return Math.max(0, Math.min(100, score));
+  }
+
+  // Generate suggestions from AI analysis
+  generateSuggestionsFromAI(aiAnalysis) {
+    const suggestions = [];
+    
+    if (aiAnalysis.matchScore?.missingSkills?.length > 0) {
+      suggestions.push({
+        type: 'skills_gap',
+        message: `Consider highlighting or developing these skills: ${aiAnalysis.matchScore.missingSkills.slice(0, 3).join(', ')}`,
+        severity: 'medium'
+      });
+    }
+    
+    if (!aiAnalysis.contact?.linkedin) {
+      suggestions.push({
+        type: 'missing_linkedin',
+        message: 'Adding a LinkedIn profile URL can strengthen the application',
+        severity: 'low'
+      });
+    }
+    
+    if (aiAnalysis.projects?.length === 0) {
+      suggestions.push({
+        type: 'no_projects',
+        message: 'Including relevant projects can demonstrate practical skills',
+        severity: 'low'
+      });
+    }
+    
+    return suggestions;
+  }
+
+  // Rule-based analysis (fallback)
+  ruleBasedAnalysis(text, jobRequirements) {
+    const skills = this.extractSkills(text);
+    const experience = this.extractExperience(text);
+    const education = this.extractEducation(text);
+    const contact = this.extractContactInfo(text);
+    const sentimentResult = this.analyzeSentiment(text);
+    const flags = this.detectRedFlags(text, experience);
+    
+    const analysisResult = {
+      skills,
+      experience,
+      education,
+      contact,
+      sentiment: sentimentResult,
+      ...flags,
+      wordCount: text.split(/\s+/).length,
+      analyzedAt: new Date(),
+      aiPowered: false
+    };
+
+    if (jobRequirements) {
+      analysisResult.matchScore = this.calculateMatchScore(analysisResult, jobRequirements);
+    }
+
+    analysisResult.interviewQuestions = this.generateInterviewQuestions(analysisResult);
+
+    return analysisResult;
+  }
+
+  // Extract skills from text (rule-based)
   extractSkills(text) {
     const lowerText = text.toLowerCase();
     const foundSkills = {
@@ -46,7 +253,6 @@ class NLPService {
       }
     }
 
-    // Extract additional keywords
     const extractedKeywords = keywordExtractor.extract(text, {
       language: "english",
       remove_digits: false,
@@ -61,12 +267,8 @@ class NLPService {
     };
   }
 
-  // Extract experience details
+  // Extract experience (rule-based)
   extractExperience(text) {
-    const doc = compromise(text);
-    const experiences = [];
-    
-    // Find years of experience patterns
     const yearPatterns = [
       /(\d+)\+?\s*years?\s*(of)?\s*(experience|exp)/gi,
       /experience[:\s]*(\d+)\+?\s*years?/gi,
@@ -84,16 +286,8 @@ class NLPService {
       }
     }
 
-    // Extract company names (basic pattern)
-    const companyPatterns = [
-      /(?:worked at|employed at|experience at|worked for)\s+([A-Z][a-zA-Z\s&]+)/gi,
-      /([A-Z][a-zA-Z\s&]+)\s*[-–]\s*(?:Software|Developer|Engineer|Manager|Lead)/gi
-    ];
-
-    // Extract job titles
     const jobTitles = [];
     const titlePatterns = [
-      /(?:as|position|role|title)[:\s]+([A-Za-z\s]+(?:Developer|Engineer|Manager|Designer|Analyst|Lead|Director|Architect))/gi,
       /((?:Senior|Junior|Lead|Principal|Staff)?\s*(?:Software|Full[\s-]?Stack|Frontend|Backend|DevOps|Data|ML|AI)?\s*(?:Developer|Engineer|Architect|Manager|Designer|Analyst))/gi
     ];
 
@@ -110,7 +304,7 @@ class NLPService {
       totalYears,
       experienceLevel: this.categorizeExperienceLevel(totalYears),
       jobTitles: [...new Set(jobTitles)].slice(0, 5),
-      experiences
+      positions: []
     };
   }
 
@@ -123,9 +317,8 @@ class NLPService {
     return 'Principal/Director';
   }
 
-  // Extract education details
+  // Extract education (rule-based)
   extractEducation(text) {
-    const education = [];
     const degrees = [];
     
     const degreePatterns = {
@@ -142,7 +335,6 @@ class NLPService {
       }
     }
 
-    // Extract university names
     const universities = [];
     const uniPatterns = [
       /(?:university of|institute of|college of)\s+([A-Za-z\s]+)/gi,
@@ -158,25 +350,10 @@ class NLPService {
       }
     }
 
-    // Extract fields of study
-    const fields = [];
-    const fieldPatterns = [
-      /(?:in|degree in|major in)\s+(computer science|information technology|software engineering|data science|electrical engineering|mechanical engineering|business administration|mathematics|physics)/gi
-    ];
-
-    for (const pattern of fieldPatterns) {
-      const matches = text.matchAll(pattern);
-      for (const match of matches) {
-        if (match[1]) {
-          fields.push(match[1].trim());
-        }
-      }
-    }
-
     return {
       degrees: [...new Set(degrees)],
       universities: [...new Set(universities)].slice(0, 3),
-      fields: [...new Set(fields)],
+      fields: [],
       highestDegree: degrees[0] || 'Not specified',
       score: this.calculateEducationScore(degrees)
     };
@@ -187,39 +364,29 @@ class NLPService {
     return degrees.length > 0 ? scores[degrees[0]] || 30 : 20;
   }
 
-  // Extract contact information
+  // Extract contact info (rule-based)
   extractContactInfo(text) {
     const contact = {};
 
-    // Email
     const emailPattern = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
     const emails = text.match(emailPattern);
     contact.email = emails ? emails[0] : null;
 
-    // Phone
     const phonePattern = /(?:\+?1[-.\s]?)?\(?[0-9]{3}\)?[-.\s]?[0-9]{3}[-.\s]?[0-9]{4}/g;
     const phones = text.match(phonePattern);
     contact.phone = phones ? phones[0] : null;
 
-    // LinkedIn
     const linkedinPattern = /linkedin\.com\/in\/([a-zA-Z0-9-]+)/gi;
     const linkedin = text.match(linkedinPattern);
     contact.linkedin = linkedin ? linkedin[0] : null;
 
-    // GitHub
     const githubPattern = /github\.com\/([a-zA-Z0-9-]+)/gi;
     const github = text.match(githubPattern);
     contact.github = github ? github[0] : null;
 
-    // Name (first line or after name:)
     const doc = compromise(text);
     const people = doc.people().out('array');
     contact.name = people[0] || this.extractName(text);
-
-    // Location
-    const locationPattern = /(?:location|address|city)[:\s]+([A-Za-z\s,]+)/gi;
-    const location = locationPattern.exec(text);
-    contact.location = location ? location[1].trim() : null;
 
     return contact;
   }
@@ -235,11 +402,10 @@ class NLPService {
     return null;
   }
 
-  // Analyze sentiment and professionalism
+  // Analyze sentiment (rule-based)
   analyzeSentiment(text) {
     const result = sentiment.analyze(text);
     
-    // Calculate professionalism score based on various factors
     const professionalWords = ['achieved', 'developed', 'implemented', 'led', 'managed', 'created', 'designed', 'improved', 'increased', 'reduced', 'delivered', 'collaborated'];
     const unprofessionalWords = ['hate', 'stupid', 'boring', 'easy', 'simple'];
     
@@ -266,13 +432,12 @@ class NLPService {
     };
   }
 
-  // Detect red flags
+  // Detect red flags (rule-based)
   detectRedFlags(text, experience) {
     const redFlags = [];
     const warnings = [];
     const suggestions = [];
 
-    // Employment gaps detection (simplified)
     const gapPatterns = /gap|break|unemployed|sabbatical|career break/gi;
     if (gapPatterns.test(text)) {
       warnings.push({
@@ -282,17 +447,6 @@ class NLPService {
       });
     }
 
-    // Job hopping detection
-    const jobMentions = (text.match(/(?:worked at|employed at|position at)/gi) || []).length;
-    if (jobMentions > 5 && experience.totalYears < 8) {
-      warnings.push({
-        type: 'job_hopping',
-        message: 'Frequent job changes detected',
-        severity: 'medium'
-      });
-    }
-
-    // Missing sections
     if (!/@/.test(text)) {
       redFlags.push({
         type: 'missing_email',
@@ -301,7 +455,6 @@ class NLPService {
       });
     }
 
-    // Check for quantifiable achievements
     const quantifiablePattern = /\d+%|\$[\d,]+|\d+\s*(?:users|customers|projects|clients)/gi;
     if (!quantifiablePattern.test(text)) {
       suggestions.push({
@@ -311,7 +464,6 @@ class NLPService {
       });
     }
 
-    // Resume length check
     const wordCount = text.split(/\s+/).length;
     if (wordCount < 100) {
       redFlags.push({
@@ -330,7 +482,7 @@ class NLPService {
     return { redFlags, warnings, suggestions };
   }
 
-  // Calculate match score with job requirements
+  // Calculate match score (rule-based)
   calculateMatchScore(resumeData, jobRequirements) {
     let score = 0;
     const matchDetails = {
@@ -340,7 +492,6 @@ class NLPService {
       educationMatch: false
     };
 
-    // Skills matching (50% weight)
     const requiredSkills = jobRequirements.skills || [];
     const resumeSkills = Object.values(resumeData.skills.categorized).flat().map(s => s.toLowerCase());
     
@@ -357,7 +508,6 @@ class NLPService {
     const skillScore = requiredSkills.length > 0 ? (skillMatches / requiredSkills.length) * 50 : 25;
     score += skillScore;
 
-    // Experience matching (30% weight)
     const requiredExperience = jobRequirements.minExperience || 0;
     if (resumeData.experience.totalYears >= requiredExperience) {
       score += 30;
@@ -367,7 +517,6 @@ class NLPService {
       score += Math.min(30, expRatio * 30);
     }
 
-    // Education matching (20% weight)
     const requiredDegree = jobRequirements.education || 'Bachelors';
     const degreeHierarchy = ['Diploma', 'Associate', 'Bachelors', 'Masters', 'PhD'];
     const requiredIndex = degreeHierarchy.indexOf(requiredDegree);
@@ -394,11 +543,10 @@ class NLPService {
     return { status: 'Not Recommended', color: 'red', action: 'Archive' };
   }
 
-  // Generate interview questions
+  // Generate interview questions (rule-based)
   generateInterviewQuestions(resumeData) {
     const questions = [];
     
-    // Skill-based questions
     const skills = Object.values(resumeData.skills.categorized).flat();
     if (skills.length > 0) {
       const topSkills = skills.slice(0, 3);
@@ -406,66 +554,58 @@ class NLPService {
         questions.push({
           category: 'Technical',
           question: `Can you describe a challenging project where you used ${skill}?`,
-          focus: skill
+          purpose: `Assess practical experience with ${skill}`
         });
       });
     }
 
-    // Experience-based questions
     if (resumeData.experience.totalYears > 0) {
       questions.push({
         category: 'Experience',
         question: `With ${resumeData.experience.totalYears} years of experience, what's been your most significant career achievement?`,
-        focus: 'achievements'
+        purpose: 'Evaluate accomplishments and self-awareness'
       });
     }
 
-    // Leadership questions for senior roles
     if (['Senior', 'Lead/Staff', 'Principal/Director'].includes(resumeData.experience.experienceLevel)) {
       questions.push({
         category: 'Leadership',
         question: 'Can you describe your experience mentoring junior team members?',
-        focus: 'leadership'
+        purpose: 'Assess leadership and mentoring abilities'
       });
     }
 
-    // Behavioral questions
     questions.push({
       category: 'Behavioral',
       question: 'Tell me about a time you had to deal with a difficult team situation.',
-      focus: 'teamwork'
+      purpose: 'Evaluate teamwork and conflict resolution'
     });
 
     return questions.slice(0, 8);
   }
 
-  // Full resume analysis
-  async analyzeResume(text, jobRequirements = null) {
-    const skills = this.extractSkills(text);
-    const experience = this.extractExperience(text);
-    const education = this.extractEducation(text);
-    const contact = this.extractContactInfo(text);
-    const sentiment = this.analyzeSentiment(text);
-    const flags = this.detectRedFlags(text, experience);
-    
-    const analysisResult = {
-      skills,
-      experience,
-      education,
-      contact,
-      sentiment,
-      ...flags,
-      wordCount: text.split(/\s+/).length,
-      analyzedAt: new Date()
-    };
-
-    if (jobRequirements) {
-      analysisResult.matchScore = this.calculateMatchScore(analysisResult, jobRequirements);
+  // Generate interview questions with AI
+  async generateInterviewQuestionsAI(resumeText, jobTitle, focusAreas = []) {
+    if (this.useAI) {
+      return await aiService.generateInterviewQuestions(resumeText, jobTitle, focusAreas);
     }
+    return null;
+  }
 
-    analysisResult.interviewQuestions = this.generateInterviewQuestions(analysisResult);
+  // Compare resumes with AI
+  async compareResumesAI(resumes, jobRequirements) {
+    if (this.useAI) {
+      return await aiService.compareResumes(resumes, jobRequirements);
+    }
+    return null;
+  }
 
-    return analysisResult;
+  // ATS optimization with AI
+  async analyzeATSOptimization(resumeText, jobDescription) {
+    if (this.useAI) {
+      return await aiService.analyzeATSOptimization(resumeText, jobDescription);
+    }
+    return null;
   }
 }
 

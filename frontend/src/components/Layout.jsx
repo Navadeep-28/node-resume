@@ -2,6 +2,8 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useQuery } from '@tanstack/react-query';
+import api from '../services/api';
 import {
   Home,
   Upload,
@@ -26,6 +28,12 @@ const navItems = [
 export default function Layout({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const location = useLocation();
+
+  const { data: aiStatus } = useQuery({
+    queryKey: ['aiStatus'],
+    queryFn: () => api.get('/resumes/ai-status').then(res => res.data),
+    staleTime: 60000, // Cache for 1 minute
+  });
 
   return (
     <div className="min-h-screen relative overflow-hidden">
@@ -177,14 +185,29 @@ export default function Layout({ children }) {
                   )}
                 </motion.button>
 
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  className="flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-500/20 border border-emerald-500/30"
-                >
-                  <span className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
-                  <span className="text-sm font-medium text-emerald-400">System Online</span>
-                </motion.div>
+                <div className="flex items-center gap-3">
+                  {/* AI Status Badge */}
+                  {aiStatus?.aiEnabled && (
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.8 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      className="flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-purple-500/20 to-pink-500/20 border border-purple-500/30"
+                    >
+                      <Sparkles className="w-4 h-4 text-purple-400" />
+                      <span className="text-sm font-medium text-purple-300">AI Powered</span>
+                    </motion.div>
+                  )}
+                  
+                  {/* System Status */}
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-500/20 border border-emerald-500/30"
+                  >
+                    <span className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
+                    <span className="text-sm font-medium text-emerald-400">Online</span>
+                  </motion.div>
+                </div>
               </div>
             </div>
           </header>

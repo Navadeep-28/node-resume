@@ -1,95 +1,155 @@
 // backend/controllers/resumeController.js
+import mongoose from 'mongoose';
 import Resume from '../models/Resume.js';
 import Job from '../models/Job.js';
 import parserService from '../services/parserService.js';
 import nlpService from '../services/nlpService.js';
+import aiService from '../services/aiService.js';
 import fs from 'fs/promises';
-import path from 'path';
 
 export const uploadResume = async (req, res) => {
   try {
     const io = req.app.get('io');
     const file = req.file;
-    const { jobId } = req.body;
+    const { jobId, analysisMode = 'ai' } = req.body;
 
     if (!file) {
       return res.status(400).json({ error: 'No file uploaded' });
     }
 
-    // Create initial resume record
+    // FIX: Ensure jobId is a valid MongoDB ObjectId, otherwise set to null
+    const validJobId = (jobId && mongoose.Types.ObjectId.isValid(jobId)) ? jobId : null;
+
+    // 1. Create initial resume record
     const resume = new Resume({
       fileName: file.filename,
       originalName: file.originalname,
       mimeType: file.mimetype,
       size: file.size,
       status: 'processing',
-      jobId: jobId || null
+      jobId: validJobId
     });
 
     await resume.save();
 
-    // Emit processing started
-    io.emit('resume-processing', {
-      resumeId: resume._id,
-      status: 'started',
-      progress: 10
-    });
+    // 2. Emit processing started
+    if (io) {
+      io.emit('resume-processing', {
+        resumeId: resume._id,
+        status: 'started',
+        progress: 10,
+        message: 'Starting analysis...'
+      });
+    }
 
-    // Parse the file
-    const text = await parserService.parseFile(file.path, file.mimetype);
+    // 3. Parse the file
+    let text = '';
+    try {
+      text = await parserService.parseFile(file.path, file.mimetype);
+    } catch (parseError) {
+      console.error('Parsing error:', parseError);
+      resume.status = 'failed';
+      await resume.save();
+      return res.status(500).json({ error: 'Failed to parse resume file' });
+    }
+    
     resume.rawText = text;
 
-    io.emit('resume-processing', {
-      resumeId: resume._id,
-      status: 'parsing-complete',
-      progress: 30
-    });
+    if (io) {
+      io.emit('resume-processing', {
+        resumeId: resume._id,
+        status: 'parsing-complete',
+        progress: 30,
+        message: 'Text extracted, analyzing...'
+      });
+    }
 
-    // Get job requirements if jobId provided
+    // 4. Get job requirements if jobId provided
     let jobRequirements = null;
-    if (jobId) {
-      const job = await Job.findById(jobId);
-      if (job) {
-        jobRequirements = job.requirements;
+    if (validJobId) {
+      try {
+        const job = await Job.findById(validJobId);
+        if (job) {
+          jobRequirements = job.requirements;
+        }
+      } catch (jobError) {
+        console.warn('Job lookup failed:', jobError);
       }
     }
 
-    io.emit('resume-processing', {
-      resumeId: resume._id,
-      status: 'analyzing',
-      progress: 50
-    });
+    if (io) {
+      io.emit('resume-processing', {
+        resumeId: resume._id,
+        status: 'analyzing',
+        progress: 50,
+        message: analysisMode === 'ai' ? '🤖 Analyzing with AI...' : '⚡ Analyzing patterns...'
+      });
+    }
 
-    // Analyze with NLP
-    const analysis = await nlpService.analyzeResume(text, jobRequirements);
+    // 5. Analyze with NLP/AI
+    let analysis;
+    try {
+      analysis = await nlpService.analyzeResume(text, jobRequirements, analysisMode);
+    } catch (analysisError) {
+      console.error('Analysis error:', analysisError);
+      // Fallback to empty analysis if service fails completely
+      analysis = {
+        contact: {},
+        skills: { categorized: {}, totalSkills: 0 },
+        experience: { totalYears: 0 },
+        education: { degrees: [] },
+        matchScore: { overallScore: 0 }
+      };
+    }
 
     resume.analysis = analysis;
-    if (jobRequirements) {
+    if (analysis && analysis.matchScore) {
       resume.matchScore = analysis.matchScore;
     }
     resume.status = 'completed';
 
+    // 6. Save final result
     await resume.save();
 
     // Update job applicants count
-    if (jobId) {
-      await Job.findByIdAndUpdate(jobId, { $inc: { applicantsCount: 1 } });
+    if (validJobId) {
+      try {
+        await Job.findByIdAndUpdate(validJobId, { $inc: { applicantsCount: 1 } });
+      } catch (e) {
+        console.warn('Failed to update job applicant count');
+      }
     }
 
-    io.emit('resume-processing', {
-      resumeId: resume._id,
-      status: 'completed',
-      progress: 100,
-      data: resume
-    });
+    if (io) {
+      io.emit('resume-processing', {
+        resumeId: resume._id,
+        status: 'completed',
+        progress: 100,
+        message: 'Analysis complete!',
+        data: resume
+      });
+    }
 
-    // Clean up uploaded file
-    await fs.unlink(file.path);
+    // 7. Clean up uploaded file
+    try {
+      await fs.unlink(file.path);
+    } catch (e) {
+      console.warn('Failed to delete temp file:', e);
+    }
 
     res.status(201).json(resume);
   } catch (error) {
-    console.error('Upload error:', error);
-    res.status(500).json({ error: error.message });
+    console.error('❌ Upload Critical Error:', error);
+    
+    // Attempt to log validation errors if Mongoose fails
+    if (error.name === 'ValidationError') {
+      console.error('Validation Details:', JSON.stringify(error.errors, null, 2));
+    }
+
+    res.status(500).json({ 
+      error: 'Resume processing failed', 
+      details: error.message 
+    });
   }
 };
 
@@ -97,15 +157,18 @@ export const uploadMultipleResumes = async (req, res) => {
   try {
     const io = req.app.get('io');
     const files = req.files;
-    const { jobId } = req.body;
+    const { jobId, analysisMode = 'ai' } = req.body;
 
     if (!files || files.length === 0) {
       return res.status(400).json({ error: 'No files uploaded' });
     }
 
+    // FIX: Ensure jobId is a valid MongoDB ObjectId
+    const validJobId = (jobId && mongoose.Types.ObjectId.isValid(jobId)) ? jobId : null;
+
     let jobRequirements = null;
-    if (jobId) {
-      const job = await Job.findById(jobId);
+    if (validJobId) {
+      const job = await Job.findById(validJobId);
       if (job) {
         jobRequirements = job.requirements;
       }
@@ -117,12 +180,15 @@ export const uploadMultipleResumes = async (req, res) => {
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
       
-      io.emit('batch-processing', {
-        current: i + 1,
-        total: totalFiles,
-        fileName: file.originalname,
-        progress: Math.round(((i + 1) / totalFiles) * 100)
-      });
+      if (io) {
+        io.emit('batch-processing', {
+          current: i + 1,
+          total: totalFiles,
+          fileName: file.originalname,
+          progress: Math.round(((i + 1) / totalFiles) * 100),
+          message: `Processing ${file.originalname}...`
+        });
+      }
 
       try {
         const resume = new Resume({
@@ -131,41 +197,48 @@ export const uploadMultipleResumes = async (req, res) => {
           mimeType: file.mimetype,
           size: file.size,
           status: 'processing',
-          jobId: jobId || null
+          jobId: validJobId
         });
 
         const text = await parserService.parseFile(file.path, file.mimetype);
         resume.rawText = text;
 
-        const analysis = await nlpService.analyzeResume(text, jobRequirements);
+        const analysis = await nlpService.analyzeResume(text, jobRequirements, analysisMode);
         resume.analysis = analysis;
         
-        if (jobRequirements) {
+        if (analysis && analysis.matchScore) {
           resume.matchScore = analysis.matchScore;
         }
         
         resume.status = 'completed';
         await resume.save();
 
-        await fs.unlink(file.path);
+        try {
+          await fs.unlink(file.path);
+        } catch (e) {}
+        
         results.push({ success: true, resume });
       } catch (error) {
+        console.error(`Error processing ${file.originalname}:`, error);
         results.push({ success: false, fileName: file.originalname, error: error.message });
       }
     }
 
-    if (jobId) {
+    if (validJobId) {
       const successCount = results.filter(r => r.success).length;
-      await Job.findByIdAndUpdate(jobId, { $inc: { applicantsCount: successCount } });
+      await Job.findByIdAndUpdate(validJobId, { $inc: { applicantsCount: successCount } });
     }
 
-    io.emit('batch-complete', { results });
+    if (io) {
+      io.emit('batch-complete', { results });
+    }
 
     res.status(201).json({
       total: totalFiles,
       successful: results.filter(r => r.success).length,
       failed: results.filter(r => !r.success).length,
-      results
+      results,
+      aiPowered: aiService.isConfigured()
     });
   } catch (error) {
     console.error('Batch upload error:', error);
@@ -223,7 +296,8 @@ export const getResumes = async (req, res) => {
         limit: parseInt(limit),
         total,
         pages: Math.ceil(total / limit)
-      }
+      },
+      aiPowered: aiService.isConfigured()
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -278,7 +352,7 @@ export const deleteResume = async (req, res) => {
 
 export const compareResumes = async (req, res) => {
   try {
-    const { resumeIds } = req.body;
+    const { resumeIds, jobId } = req.body;
     
     if (!resumeIds || resumeIds.length < 2) {
       return res.status(400).json({ error: 'At least 2 resume IDs required for comparison' });
@@ -286,6 +360,25 @@ export const compareResumes = async (req, res) => {
 
     const resumes = await Resume.find({ _id: { $in: resumeIds } });
 
+    // Try AI-powered comparison first
+    if (aiService.isConfigured() && jobId) {
+      try {
+        const job = await Job.findById(jobId);
+        if (job) {
+          const aiComparison = await nlpService.compareResumesAI(resumes, job.requirements);
+          if (aiComparison) {
+            return res.json({ 
+              comparison: aiComparison, 
+              aiPowered: true 
+            });
+          }
+        }
+      } catch (error) {
+        console.error('AI comparison failed, using rule-based:', error);
+      }
+    }
+
+    // Fallback to rule-based comparison
     const comparison = resumes.map(resume => ({
       id: resume._id,
       name: resume.analysis?.contact?.name || resume.originalName,
@@ -300,10 +393,9 @@ export const compareResumes = async (req, res) => {
       warningsCount: resume.analysis?.warnings?.length || 0
     }));
 
-    // Sort by match score
     comparison.sort((a, b) => b.matchScore - a.matchScore);
 
-    res.json({ comparison });
+    res.json({ comparison, aiPowered: false });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -330,7 +422,7 @@ export const reanalyzeResume = async (req, res) => {
     const analysis = await nlpService.analyzeResume(resume.rawText, jobRequirements);
     resume.analysis = analysis;
     
-    if (jobRequirements) {
+    if (analysis.matchScore) {
       resume.matchScore = analysis.matchScore;
     }
     
@@ -340,4 +432,72 @@ export const reanalyzeResume = async (req, res) => {
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
+};
+
+export const generateInterviewQuestions = async (req, res) => {
+  try {
+    const { jobTitle, focusAreas } = req.body;
+    const resume = await Resume.findById(req.params.id);
+    
+    if (!resume) {
+      return res.status(404).json({ error: 'Resume not found' });
+    }
+
+    if (!aiService.isConfigured()) {
+      return res.json({ 
+        questions: resume.analysis?.interviewQuestions || [],
+        aiPowered: false
+      });
+    }
+
+    const questions = await nlpService.generateInterviewQuestionsAI(
+      resume.rawText, 
+      jobTitle || 'Software Engineer',
+      focusAreas || []
+    );
+
+    res.json({ questions: questions?.questions || [], aiPowered: true });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const analyzeATS = async (req, res) => {
+  try {
+    const { jobDescription } = req.body;
+    const resume = await Resume.findById(req.params.id);
+    
+    if (!resume) {
+      return res.status(404).json({ error: 'Resume not found' });
+    }
+
+    if (!aiService.isConfigured()) {
+      return res.status(400).json({ 
+        error: 'AI service not configured',
+        message: 'Please add OPENAI_API_KEY to enable ATS analysis'
+      });
+    }
+
+    const atsAnalysis = await nlpService.analyzeATSOptimization(
+      resume.rawText, 
+      jobDescription
+    );
+
+    res.json({ atsAnalysis, aiPowered: true });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const getAIStatus = async (req, res) => {
+  res.json({
+    aiEnabled: aiService.isConfigured(),
+    model: aiService.isConfigured() ? 'gpt-4o-mini' : null,
+    features: {
+      resumeAnalysis: true,
+      interviewQuestions: aiService.isConfigured(),
+      resumeComparison: aiService.isConfigured(),
+      atsOptimization: aiService.isConfigured()
+    }
+  });
 };

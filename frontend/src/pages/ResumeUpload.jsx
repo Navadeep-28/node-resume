@@ -11,7 +11,8 @@ import {
   AlertCircle,
   Loader2,
   Sparkles,
-  Zap
+  Zap,
+  Cpu
 } from 'lucide-react';
 import { io } from 'socket.io-client';
 import toast from 'react-hot-toast';
@@ -25,6 +26,12 @@ export default function ResumeUpload() {
   const [progress, setProgress] = useState({});
   const [results, setResults] = useState([]);
   const [selectedJob, setSelectedJob] = useState('');
+  const [analysisMode, setAnalysisMode] = useState('ai');
+
+  const { data: aiStatus } = useQuery({
+    queryKey: ['aiStatus'],
+    queryFn: () => api.get('/resumes/ai-status').then(res => res.data),
+  });
 
   const { data: jobsData } = useQuery({
     queryKey: ['jobs'],
@@ -74,6 +81,7 @@ export default function ResumeUpload() {
 
     try {
       const formData = new FormData();
+      formData.append('analysisMode', analysisMode);
       files.forEach(f => formData.append('resumes', f.file));
       if (selectedJob) formData.append('jobId', selectedJob);
 
@@ -110,14 +118,74 @@ export default function ResumeUpload() {
           <Upload className="w-10 h-10 text-white" />
         </motion.div>
         <h1 className="text-3xl font-bold text-white">Upload Resumes</h1>
-        <p className="text-white/50 mt-2">Drop your resume files here for AI-powered analysis</p>
+        <p className="text-white/50 mt-2">Select analysis mode and drop files for AI-powered analysis</p>
       </div>
+
+      {/* Mode Selection Toggle */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+        className="grid grid-cols-1 md:grid-cols-2 gap-4"
+      >
+        {/* AI Mode Option */}
+        <motion.button
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+          onClick={() => aiStatus?.aiEnabled ? setAnalysisMode('ai') : toast.error('AI not configured on server')}
+          className={`p-4 rounded-2xl border text-left transition-all ${
+            analysisMode === 'ai'
+              ? 'bg-violet-500/20 border-violet-500/50 shadow-lg shadow-violet-500/10'
+              : 'bg-white/5 border-white/10 hover:bg-white/10 opacity-70'
+          } ${!aiStatus?.aiEnabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+        >
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              <Cpu className={`w-5 h-5 ${analysisMode === 'ai' ? 'text-violet-400' : 'text-white/50'}`} />
+              <span className={`font-semibold ${analysisMode === 'ai' ? 'text-violet-300' : 'text-white/70'}`}>
+                AI Intelligence
+              </span>
+            </div>
+            {analysisMode === 'ai' && <div className="w-3 h-3 bg-violet-400 rounded-full shadow-lg shadow-violet-400/50" />}
+          </div>
+          <p className="text-xs text-white/50">
+            Deep analysis using GPT-4. Extracts insights, salary estimates, and detailed strengths.
+            <span className="block mt-1 text-violet-300/70 text-[10px] uppercase tracking-wider">Slower • More Accurate</span>
+          </p>
+        </motion.button>
+
+        {/* Rule-Based Option */}
+        <motion.button
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+          onClick={() => setAnalysisMode('rule')}
+          className={`p-4 rounded-2xl border text-left transition-all ${
+            analysisMode === 'rule'
+              ? 'bg-blue-500/20 border-blue-500/50 shadow-lg shadow-blue-500/10'
+              : 'bg-white/5 border-white/10 hover:bg-white/10 opacity-70'
+          }`}
+        >
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              <Zap className={`w-5 h-5 ${analysisMode === 'rule' ? 'text-blue-400' : 'text-white/50'}`} />
+              <span className={`font-semibold ${analysisMode === 'rule' ? 'text-blue-300' : 'text-white/70'}`}>
+                Fast Pattern Match
+              </span>
+            </div>
+            {analysisMode === 'rule' && <div className="w-3 h-3 bg-blue-400 rounded-full shadow-lg shadow-blue-400/50" />}
+          </div>
+          <p className="text-xs text-white/50">
+            Instant keyword and regex matching. Best for quick screening of large batches.
+            <span className="block mt-1 text-blue-300/70 text-[10px] uppercase tracking-wider">Instant • Standard</span>
+          </p>
+        </motion.button>
+      </motion.div>
 
       {/* Job Selection */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1 }}
+        transition={{ delay: 0.2 }}
         className="rounded-2xl glass-card p-6"
       >
         <label className="block text-sm font-medium text-white/80 mb-3">
@@ -141,7 +209,7 @@ export default function ResumeUpload() {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2 }}
+        transition={{ delay: 0.3 }}
       >
         <div
           {...getRootProps()}
@@ -262,8 +330,8 @@ export default function ResumeUpload() {
                 </>
               ) : (
                 <>
-                  <Zap className="w-5 h-5" />
-                  Analyze {files.length} Resume{files.length > 1 ? 's' : ''}
+                  {analysisMode === 'ai' ? <Sparkles className="w-5 h-5" /> : <Zap className="w-5 h-5" />}
+                  Analyze {files.length} Resume{files.length > 1 ? 's' : ''} with {analysisMode === 'ai' ? 'AI' : 'Pattern Matching'}
                 </>
               )}
             </motion.button>
@@ -367,7 +435,7 @@ export default function ResumeUpload() {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.3 }}
+        transition={{ delay: 0.4 }}
         className="grid grid-cols-1 md:grid-cols-3 gap-4"
       >
         {[
@@ -379,7 +447,7 @@ export default function ResumeUpload() {
             key={feature.title}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4 + index * 0.1 }}
+            transition={{ delay: 0.5 + index * 0.1 }}
             whileHover={{ y: -5 }}
             className="p-6 rounded-2xl glass-card text-center group"
           >
