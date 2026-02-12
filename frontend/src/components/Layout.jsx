@@ -13,7 +13,8 @@ import {
   GitCompare,
   Menu,
   X,
-  Sparkles
+  Sparkles,
+  Cpu // <--- Added Cpu import for the AI badge icon
 } from 'lucide-react';
 
 const navItems = [
@@ -186,19 +187,20 @@ export default function Layout({ children }) {
                 </motion.button>
 
                 <div className="flex items-center gap-3">
-                  {/* AI Status Badge */}
+                  {/* AI Status Badge - Changed to Gemini */}
                   {aiStatus?.aiEnabled && (
                     <motion.div
                       initial={{ opacity: 0, scale: 0.8 }}
                       animate={{ opacity: 1, scale: 1 }}
                       className="flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-purple-500/20 to-pink-500/20 border border-purple-500/30"
                     >
-                      <Sparkles className="w-4 h-4 text-purple-400" />
-                      <span className="text-sm font-medium text-purple-300">AI Powered</span>
+                      <Cpu className="w-4 h-4 text-purple-400" />
+                      <span className="text-sm font-medium text-purple-300">Gemini Powered</span>
                     </motion.div>
                   )}
                   
-                  {/* System Status */}
+                  {/* System Status - Hidden per your previous request, but added back if you want it */}
+                  {/* 
                   <motion.div
                     initial={{ opacity: 0, scale: 0.8 }}
                     animate={{ opacity: 1, scale: 1 }}
@@ -207,6 +209,7 @@ export default function Layout({ children }) {
                     <span className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
                     <span className="text-sm font-medium text-emerald-400">Online</span>
                   </motion.div>
+                  */}
                 </div>
               </div>
             </div>

@@ -24,13 +24,13 @@ class NLPService {
     this.useAI = aiService.isConfigured();
   }
 
-  // Main analysis function - uses AI if available, falls back to rule-based
+  // --- UPDATED: Main analysis function with mode selection ---
   async analyzeResume(text, jobRequirements = null, mode = 'ai') {
     const aiAvailable = aiService.isConfigured();
     
     console.log(`Processing Request - Mode: ${mode}, AI Available: ${aiAvailable}`);
     
-    // If User wants AI AND AI is configured
+    // 1. If User chose AI AND AI is configured -> Use AI
     if (mode === 'ai' && aiAvailable) {
       try {
         console.log('🤖 Starting AI Analysis...');
@@ -38,12 +38,12 @@ class NLPService {
         return this.transformAIResponse(aiAnalysis, text);
       } catch (error) {
         console.error('⚠️ AI Failed, falling back to rule-based:', error.message);
-        // Fallback is still useful if AI crashes mid-way
+        // Fallback is crucial if AI crashes (e.g. rate limit)
         return this.ruleBasedAnalysis(text, jobRequirements);
       }
     }
     
-    // Explicit Rule-Based Mode OR AI not configured
+    // 2. If User chose Rule-Based OR AI is not configured -> Use Rule-Based
     else {
       console.log('⚡ Running Rule-Based Analysis');
       return this.ruleBasedAnalysis(text, jobRequirements);

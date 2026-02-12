@@ -7,6 +7,9 @@ import nlpService from '../services/nlpService.js';
 import aiService from '../services/aiService.js';
 import fs from 'fs/promises';
 
+// Helper to pause execution (for rate limiting)
+const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
 export const uploadResume = async (req, res) => {
   try {
     const io = req.app.get('io');
@@ -179,6 +182,13 @@ export const uploadMultipleResumes = async (req, res) => {
 
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
+      
+      // --- RATE LIMIT FIX: Wait 4 seconds between resumes ---
+      if (i > 0) {
+        console.log('⏳ Cooling down for API rate limits...');
+        await sleep(4000); 
+      }
+      // ----------------------------------------------------
       
       if (io) {
         io.emit('batch-processing', {

@@ -149,7 +149,7 @@ export default function ResumeUpload() {
             {analysisMode === 'ai' && <div className="w-3 h-3 bg-violet-400 rounded-full shadow-lg shadow-violet-400/50" />}
           </div>
           <p className="text-xs text-white/50">
-            Deep analysis using GPT-4. Extracts insights, salary estimates, and detailed strengths.
+            Deep analysis using Google Gemini. Extracts insights, salary estimates, and detailed strengths.
             <span className="block mt-1 text-violet-300/70 text-[10px] uppercase tracking-wider">Slower • More Accurate</span>
           </p>
         </motion.button>
